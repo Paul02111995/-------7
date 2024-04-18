@@ -54,29 +54,38 @@ def birthdays(args, book):
             birthday_this_year = birthday.replace(year=today.year)
             if birthday_this_year < today:
                 birthday_this_year = birthday_this_year.replace(year=birthday_this_year.year + 1)
-            if today <= birthday_this_year <= next_week:
-                day_of_week = birthday_this_year.strftime("%A") 
-                birthday_list.append((record.name.value, birthday_this_year, day_of_week))
+            days_to_birthday = (birthday_this_year - today).days
+            if 0 <= days_to_birthday <= 7:
+                congratulation_date = birthday_this_year
+
+                if congratulation_date.weekday() >= 5:
+                    days_until_monday = (7 - congratulation_date.weekday()) % 7
+                    congratulation_date += timedelta(days=days_until_monday)
+
+                birthday_list.append({
+                    "name": record.name.value,
+                    "congratulation_date": congratulation_date.strftime("%Y.%m.%d"),
+                })
+
     if birthday_list:
-        result = "\n".join([f"{name}: {birthday} ({day})" for name, birthday, day in birthday_list])
-        return f"Birthdays in the next week:\n{result}"
+        result = "\n".join([f"{user['name']}: {user['congratulation_date']}" for user in birthday_list])
+        return f"Upcoming birthdays in the next week:\n{result}"
     else:
         return "No birthdays in the next week."
-
+     
 @input_error
 def change_phone(args, book):
-    if len(args) != 2:
-        return "Invalid command. Please provide both name and new phone number after 'change'."
-    name, new_phone = args
+    if len(args) != 3:
+        return "Invalid command. Please provide name, old phone number, and new phone number after 'change'."
+    name, old_phone, new_phone = args
     record = book.find(name)
     if record:
         try:
-            if len(record.phones) == 1:
-                old_phone = record.phones[0].value
-                record.edit_phone(old_phone, new_phone)
-                return f"Phone number updated for {name}."
-            else:
-                return f"Error: Multiple phone numbers found for {name}. Please specify which one to change."
+            if old_phone not in [phone.value for phone in record.phones]:
+                return f"Error: Old phone number {old_phone} not found for {name}."
+            
+            record.edit_phone(old_phone, new_phone)
+            return f"Phone number updated for {name}."
         except ValueError as e:
             return f"Error: {str(e)}"
     else:
